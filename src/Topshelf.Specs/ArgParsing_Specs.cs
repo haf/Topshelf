@@ -12,12 +12,12 @@
 // specific language governing permissions and limitations under the License.
 namespace Topshelf.Specs
 {
-	using Hosts;
 	using Magnum.TestFramework;
 	using NUnit.Framework;
+	using Topshelf.Hosts;
 
 
-    [Ignore("Failing")]
+	[Ignore("Failing")]
     [Scenario]
     public class Given_no_command_line
     {

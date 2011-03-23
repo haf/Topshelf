@@ -15,7 +15,6 @@ namespace Topshelf.Hosts
 	using System;
 	using System.IO;
 	using System.Linq;
-	using System.Runtime.CompilerServices;
 	using System.ServiceProcess;
 	using System.Threading;
 	using Internal;
@@ -30,7 +29,6 @@ namespace Topshelf.Hosts
 		readonly ILog _log = LogManager.GetLogger("Topshelf.Hosts.ConsoleRunHost");
 		IServiceCoordinator _coordinator;
 		ManualResetEvent _exit;
-		volatile bool _hasCancelled;
 
 		public ConsoleRunHost([NotNull] ServiceDescription description, [NotNull] IServiceCoordinator coordinator)
 		{
@@ -102,15 +100,16 @@ namespace Topshelf.Hosts
 			}
 		}
 
-		void HandleCancelKeyPress(object sender, ConsoleCancelEventArgs consoleCancelEventArgs)
+		internal void HandleCancelKeyPress(object sender, ConsoleCancelEventArgs consoleCancelEventArgs)
 		{
-			if (consoleCancelEventArgs.SpecialKey == ConsoleSpecialKey.ControlBreak)
+			if (consoleCancelEventArgs != null && consoleCancelEventArgs.SpecialKey == ConsoleSpecialKey.ControlBreak)
 			{
 				_log.Error("Control+Break detected, terminating service (not cleanly, use Control+C to exit cleanly)");
 				return;
 			}
 
-			consoleCancelEventArgs.Cancel = true;
+			if (consoleCancelEventArgs != null)
+				consoleCancelEventArgs.Cancel = true;
 			_log.Info("Control+C detected, scheduling exit (idempotently).");
 			_signalExiting();
 		}
