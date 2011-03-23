@@ -41,6 +41,7 @@ namespace Topshelf.Hosts
 
 			_description = description;
 			_coordinator = coordinator;
+			_signalExiting = ((Action)SignalExiting).FireOnceOnly();
 		}
 
 		public void Run()
@@ -66,10 +67,16 @@ namespace Topshelf.Hosts
 			catch (Exception ex)
 			{
 				_log.Error("An exception occurred", ex);
+				
+				// Henrik: in case an exception happens we must make sure that
+				// CTRL+C doesn't trigger _exit.Set() a second time, so run it
+				// (there's no harm in setting the reset event)
+				_signalExiting();
 			}
 			finally
 			{
 				ShutdownCoordinator();
+				
 				_exit.Close();
 			}
 		}
@@ -95,7 +102,6 @@ namespace Topshelf.Hosts
 			}
 		}
 
-		[MethodImpl(MethodImplOptions.Synchronized)]
 		void HandleCancelKeyPress(object sender, ConsoleCancelEventArgs consoleCancelEventArgs)
 		{
 			if (consoleCancelEventArgs.SpecialKey == ConsoleSpecialKey.ControlBreak)
@@ -105,14 +111,14 @@ namespace Topshelf.Hosts
 			}
 
 			consoleCancelEventArgs.Cancel = true;
+			_log.Info("Control+C detected, scheduling exit (idempotently).");
+			_signalExiting();
+		}
 
-			if (_hasCancelled)
-				return;
-
-			_log.Info("Control+C detected, exiting.");
+		readonly Action _signalExiting;
+		void SignalExiting()
+		{
 			_exit.Set();
-
-			_hasCancelled = true;
 		}
 
 		void CheckToSeeIfWinServiceRunning()

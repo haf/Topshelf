@@ -183,6 +183,7 @@
     <Compile Include="Hosts\StartHost.cs" />
     <Compile Include="Hosts\StopHost.cs" />
     <Compile Include="Hosts\UninstallHost.cs" />
+    <Compile Include="Internal\FunEx.cs" />
     <Compile Include="Messages\ContinueService.cs" />
     <Compile Include="Messages\CreateShelfService.cs" />
     <Compile Include="Messages\ExceptionDetail.cs" />
