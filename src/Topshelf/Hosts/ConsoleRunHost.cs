@@ -110,7 +110,9 @@ namespace Topshelf.Hosts
 
 			if (consoleCancelEventArgs != null)
 				consoleCancelEventArgs.Cancel = true;
+			
 			_log.Info("Control+C detected, scheduling exit (idempotently).");
+
 			_signalExiting();
 		}
 

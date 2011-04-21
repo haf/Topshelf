@@ -16,7 +16,7 @@ BUILD_CONFIG_KEY = ENV['BUILD_CONFIG_KEY'] || 'NET40'
 BUILD_PLATFORM = ENV['BUILD_PLATFORM'] || 'x86' # we might want to vary this a little
 TARGET_FRAMEWORK_VERSION = (BUILD_CONFIG_KEY == "NET40" ? "v4.0" : "v3.5")
 MSB_USE = (BUILD_CONFIG_KEY == "NET40" ? :net4 : :net35)
-OUTPUT_PATH = (BUILD_CONFIG_KEY == "NET40" ? 'net-4.0' : 'net-3.5')
+OUTPUT_PATH = (BUILD_CONFIG_KEY == "NET40" ? 'NET40' : 'NET35')
 
 props = { 
   :src => File.expand_path("src"),
@@ -24,7 +24,8 @@ props = {
   :stage => File.expand_path("build_output"),
   :output => File.join( File.expand_path("build_output"), OUTPUT_PATH ),
   :artifacts => File.expand_path("build_artifacts"),
-  :projects => ["Topshelf", "Topshelf.Host"]
+  :projects => ["Topshelf", "Topshelf.Host"],
+  :lib => File.expand_path("lib")
 }
 
 puts "Building for .NET Framework #{TARGET_FRAMEWORK_VERSION} in #{BUILD_CONFIG}-mode."
@@ -94,6 +95,7 @@ end
 desc "Cleans, versions, compiles the application and generates build_output/."
 task :compile => [:global_version, :build, :build_x86] do
 	puts 'Copying unmerged dependencies to output folder'
+	copyOutputFiles File.join(props[:lib], "Magnum/#{OUTPUT_PATH}"), "Magnum.{dll,pdb,xml}", File.join(props[:src], "Topshelf/bin/#{BUILD_CONFIG}")
 	copyOutputFiles File.join(props[:src], "Topshelf.Host/bin/#{BUILD_CONFIG}"), "log4net.{dll,pdb,xml,config}", props[:output]
 	copyOutputFiles File.join(props[:src], "Topshelf.Host/bin/#{BUILD_CONFIG}"), "Topshelf.Host.{exe,pdb}", props[:output]
 	copyOutputFiles File.join(props[:src], "Topshelf.Host/bin/#{BUILD_CONFIG}"), "Topshelf.Host.exe.config", props[:output]
@@ -111,7 +113,7 @@ ilmerge :ilmerge do |ilm|
     ilm.use MSB_USE
 	ilm.log = File.join( props[:src], "Topshelf","bin","#{BUILD_CONFIG}", 'ilmerge.log' )
 	ilm.allow_dupes = true
-	ilm.references = [ 'Topshelf.dll', 'Magnum.dll', 'Newtonsoft.Json.dll', 'Spark.dll', 'Stact.dll', 'Stact.ServerFramework.dll' ]
+	ilm.references = [ 'Topshelf.dll', 'Stact.dll', 'Stact.ServerFramework.dll', 'Magnum.dll', 'Spark.dll' ]
 end
 
 desc "Prepare examples"
@@ -186,12 +188,15 @@ end
 desc "Target used for the CI server. It both builds, tests and packages."
 task :ci => [:default, :package, :moma]
 
+task :package => [:zip_output, :nuget]
+
 desc "ZIPs up the build results and runs the MoMA analyzer."
-zip :package do |zip|
+zip :zip_output do |zip|
 	zip.directories_to_zip = [props[:stage]]
-	zip.output_file = "topshelf-#{BUILD_NUMBER_BASE}.zip"
+	zip.output_file = "Topshelf-#{BUILD_NUMBER_BASE}.zip"
 	zip.output_path = [props[:artifacts]]
 end
+
 
 desc "Runs the MoMA mono analyzer on the project files. Start the executable manually without --nogui to update the profiles once in a while though, or you'll always get the same report from the analyzer."
 task :moma => [:compile] do
@@ -204,7 +209,7 @@ end
 
 desc "Builds the nuget package"
 task :nuget do
-#	sh "lib/nuget.exe pack packaging/nuget/topshelf.nuspec -o artifacts"
+	sh "lib/nuget pack topshelf.nuspec /OutputDirectory build_artifacts"
 end
 
 def project_outputs(props)
